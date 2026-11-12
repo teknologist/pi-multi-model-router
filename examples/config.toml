@@ -1,0 +1,49 @@
+[[virtual_models]]
+provider = "openai-codex"
+id = "auto"
+name = "Auto"
+
+[virtual_models.routing]
+fallback = "balanced"
+
+[virtual_models.routing.quick]
+provider = "openai-codex"
+model = "gpt-6.1-terra"
+thinking_level = "low"
+description = "Simple questions and small, clear tasks."
+
+[virtual_models.routing.balanced]
+model = "gpt-6.1-sol"
+thinking_level = "medium"
+description = "General tasks that need moderate reasoning."
+
+[virtual_models.routing.deep]
+model = "gpt-6-astra"
+thinking_level = "medium"
+description = "Complex tasks that need careful reasoning."
+
+[[virtual_models]]
+provider = "router"
+id = "local-ai"
+name = "local-ai"
+
+[virtual_models.routing]
+fallback = "balanced"
+
+[virtual_models.routing.quick]
+provider = "local-engine"
+model = "qwen3.8-27b"
+thinking_level = "off"
+description = "Simple questions and small, clear tasks."
+
+[virtual_models.routing.balanced]
+provider = "local-engine"
+model = "qwen3.8-27b"
+thinking_level = "medium"
+description = "General tasks that need moderate reasoning."
+
+[virtual_models.routing.deep]
+provider = "local-engine-2"
+model = "GLM-5.3-Flash-EXL3"
+thinking_level = "high"
+description = "Complex tasks that need careful reasoning."

@@ -1,0 +1,34 @@
+{
+  "name": "pi-multi-model-router",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./index.ts"]
+  },
+  "files": ["index.ts", "src/config.ts", "src/router.ts", "examples/config.toml", "README.md", "LICENSE"],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "evaluate:live": "node --experimental-strip-types scripts/evaluate-live.ts",
+    "test:prerequisites": "node --experimental-strip-types --test tests/native-prerequisites.test.ts"
+  },
+  "dependencies": {
+    "smol-toml": "1.9.1"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "1.5.1",
+    "@earendil-works/pi-coding-agent": "1.5.1"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "1.5.1",
+    "@earendil-works/pi-coding-agent": "1.5.1",
+    "@types/node": "22.19.0",
+    "typescript": "7.0.2"
+  }
+}
