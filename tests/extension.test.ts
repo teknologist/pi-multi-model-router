@@ -130,9 +130,9 @@ test("status reports only active owned entries and resets with the session", asy
     await runner.emitMessageEnd({ type: "message_end", message });
   }
   await message("terra", 1430, 20000);
-  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mterra\u001b[22m: 100% · 71.5 t/s"]);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[2m\u21c4\u001b[0m \u001b[1mterra\u001b[22m: 100% · 71.5 t/s"]);
   await message("sol", 1430, 10000);
-  assert.deepEqual(statuses.at(-1), ["multi-model-router", "terra: 50% · 71.5 t/s | \u001b[1msol\u001b[22m: 50% · 143.0 t/s"]);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[2m\u21c4\u001b[0m terra: 50% · 71.5 t/s | \u001b[1msol\u001b[22m: 50% · 143.0 t/s"]);
   const counted = statuses.length;
   await message("error", 1000, 1000, "error");
   await message("aborted", 1000, 1000, "aborted");
@@ -140,18 +140,18 @@ test("status reports only active owned entries and resets with the session", asy
   await session.setModel(local);
   assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
   await message("local", 10, 1000);
-  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mlocal\u001b[22m: 100% · 10.0 t/s"]);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[2m\u21c4\u001b[0m \u001b[1mlocal\u001b[22m: 100% · 10.0 t/s"]);
   await session.setModel(physical);
   assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
   const nonOwned = statuses.length;
   await message("ignored", 10000, 1000);
   assert.equal(statuses.length, nonOwned);
   await session.setModel(auto);
-  assert.deepEqual(statuses.at(-1), ["multi-model-router", "terra: 50% · 71.5 t/s | \u001b[1msol\u001b[22m: 50% · 143.0 t/s"]);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[2m\u21c4\u001b[0m terra: 50% · 71.5 t/s | \u001b[1msol\u001b[22m: 50% · 143.0 t/s"]);
   await runner.emit({ type: "session_start", reason: "new" });
   assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
   await message("fresh", 20, 1000);
-  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mfresh\u001b[22m: 100% · 20.0 t/s"]);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[2m\u21c4\u001b[0m \u001b[1mfresh\u001b[22m: 100% · 20.0 t/s"]);
   await runner.emit({ type: "session_shutdown", reason: "quit" });
   assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
 });
@@ -184,7 +184,7 @@ test("usage is attributed to the entry selected at message start, even if the mo
   assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
   await session.setModel(auto);
   // The message was attributed to the entry selected at message_start.
-  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mterra\u001b[22m: 100% · 50.0 t/s"]);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[2m\u21c4\u001b[0m \u001b[1mterra\u001b[22m: 100% · 50.0 t/s"]);
 });
 
 test("virtual entry identities containing slashes keep separate counters", async (t) => {
@@ -215,12 +215,12 @@ test("virtual entry identities containing slashes keep separate counters", async
   }
   await session.setModel(first);
   await message("m1", 1000);
-  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mm1\u001b[22m: 100% · 1000.0 t/s"]);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[2m\u21c4\u001b[0m \u001b[1mm1\u001b[22m: 100% · 1000.0 t/s"]);
   await session.setModel(second);
   await message("m2", 1000);
-  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mm2\u001b[22m: 100% · 1000.0 t/s"]);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[2m\u21c4\u001b[0m \u001b[1mm2\u001b[22m: 100% · 1000.0 t/s"]);
   await session.setModel(first);
-  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mm1\u001b[22m: 100% · 1000.0 t/s"]);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[2m\u21c4\u001b[0m \u001b[1mm1\u001b[22m: 100% · 1000.0 t/s"]);
 });
 
 test("factory supports two virtual IDs under one provider", async (t) => {

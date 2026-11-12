@@ -36,10 +36,11 @@ export function render(ledger: UsageLedger, entryKey: string): string | undefine
   const remaining = 100 - shares.reduce((sum, share) => sum + share.pct, 0);
   const ranked = [...shares].sort((a, b) => b.remainder - a.remainder || a.index - b.index);
   for (const share of ranked.slice(0, remaining)) share.pct++;
-  return records.map((usage, index) => {
+  const body = records.map((usage, index) => {
     const speed = usage.elapsedMs > 0 ? ` · ${(usage.outputTokens / (usage.elapsedMs / 1000)).toFixed(1)} t/s` : "";
     const label = usage === entry?.get(entry.lastModelKey ?? "")
       ? `\u001b[1m${usage.modelId}\u001b[22m` : usage.modelId;
     return `${label}: ${shares[index]?.pct}%${speed}`;
   }).join(" | ");
+  return `\u001b[2m⇄\u001b[0m ${body}`;
 }
