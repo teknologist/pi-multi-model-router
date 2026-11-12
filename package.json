@@ -11,7 +11,7 @@
   "pi": {
     "extensions": ["./index.ts"]
   },
-  "files": ["index.ts", "src/config.ts", "src/router.ts", "examples/config.toml", "README.md", "LICENSE"],
+  "files": ["index.ts", "src/config.ts", "src/router.ts", "src/usage.ts", "examples/config.toml", "README.md", "LICENSE"],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts",

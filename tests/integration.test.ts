@@ -344,7 +344,7 @@ test("packed allowlist loads the real entrypoint and both identities without omi
   assert.equal(packed.length, 1);
   const archive = packed[0];
   assert.ok(archive);
-  const required = ["examples/config.toml", "index.ts", "package.json", "src/config.ts", "src/router.ts", "README.md", "LICENSE"];
+  const required = ["examples/config.toml", "index.ts", "package.json", "src/config.ts", "src/router.ts", "src/usage.ts", "README.md", "LICENSE"];
   const allowed = new Set(required);
   for (const path of required) assert.ok(archive.files.some((file) => file.path === path), `packed ${path} is required`);
   for (const file of archive.files) assert.ok(allowed.has(file.path), `unexpected packed file ${file.path}`);

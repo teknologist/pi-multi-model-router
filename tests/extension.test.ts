@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test, { type TestContext } from "node:test";
-import { fauxProvider, InMemoryModelsStore } from "@earendil-works/pi-ai";
+import { fauxAssistantMessage, fauxProvider, InMemoryModelsStore } from "@earendil-works/pi-ai";
 import {
   createAgentSession, DefaultResourceLoader, ExtensionRunner, ModelRuntime, SessionManager, SettingsManager,
   type ExtensionAPI, type ExtensionError, type ExtensionVirtualModel,
@@ -102,6 +102,125 @@ test("factory queues exactly both example identities before session_start withou
   assert.equal(session.model?.provider, "router");
   assert.equal(session.model?.id, "local-ai");
   assert.equal(faux.state.callCount, 0);
+});
+
+test("status reports only active owned entries and resets with the session", async (t) => {
+  const f = await fixture(t, exampleSource.replaceAll('"openai-codex"', '"router"'));
+  const { runtime, session, physical } = await f.start();
+  const runner = session.extensionRunner;
+  const statuses: [string, string | undefined][] = [];
+  runner.setUIContext({ ...runner.getUIContext(), setStatus: (key, line) => { statuses.push([key, line]); } });
+  let now = 0;
+  t.mock.method(performance, "now", () => now);
+  await runner.emit({ type: "session_start", reason: "startup" });
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
+  const auto = runtime.getModel("router", "auto");
+  const local = runtime.getModel("router", "local-ai");
+  assert.ok(auto && local);
+  await session.setModel(auto);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
+  async function message(model: string, output: number, elapsed: number, stopReason: "stop" | "error" | "aborted" = "stop") {
+    const message = fauxAssistantMessage("answer");
+    message.provider = "physical";
+    message.model = model;
+    message.usage.output = output;
+    message.stopReason = stopReason;
+    await runner.emit({ type: "message_start", message });
+    now += elapsed;
+    await runner.emitMessageEnd({ type: "message_end", message });
+  }
+  await message("terra", 1430, 20000);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mterra\u001b[22m: 100% · 71.5 t/s"]);
+  await message("sol", 1430, 10000);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "terra: 50% · 71.5 t/s | \u001b[1msol\u001b[22m: 50% · 143.0 t/s"]);
+  const counted = statuses.length;
+  await message("error", 1000, 1000, "error");
+  await message("aborted", 1000, 1000, "aborted");
+  assert.equal(statuses.length, counted);
+  await session.setModel(local);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
+  await message("local", 10, 1000);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mlocal\u001b[22m: 100% · 10.0 t/s"]);
+  await session.setModel(physical);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
+  const nonOwned = statuses.length;
+  await message("ignored", 10000, 1000);
+  assert.equal(statuses.length, nonOwned);
+  await session.setModel(auto);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "terra: 50% · 71.5 t/s | \u001b[1msol\u001b[22m: 50% · 143.0 t/s"]);
+  await runner.emit({ type: "session_start", reason: "new" });
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
+  await message("fresh", 20, 1000);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mfresh\u001b[22m: 100% · 20.0 t/s"]);
+  await runner.emit({ type: "session_shutdown", reason: "quit" });
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
+});
+
+test("usage is attributed to the entry selected at message start, even if the model changes mid-stream", async (t) => {
+  const f = await fixture(t, exampleSource.replaceAll('"openai-codex"', '"router"'));
+  const { runtime, session, physical } = await f.start();
+  const runner = session.extensionRunner;
+  const statuses: [string, string | undefined][] = [];
+  runner.setUIContext({ ...runner.getUIContext(), setStatus: (key, line) => { statuses.push([key, line]); } });
+  let now = 0;
+  t.mock.method(performance, "now", () => now);
+  await runner.emit({ type: "session_start", reason: "startup" });
+  const auto = runtime.getModel("router", "auto");
+  const local = runtime.getModel("router", "local-ai");
+  assert.ok(auto && local);
+  await session.setModel(auto);
+  const message = fauxAssistantMessage("answer");
+  message.provider = "physical";
+  message.model = "terra";
+  message.usage.output = 1000;
+  message.stopReason = "stop";
+  await runner.emit({ type: "message_start", message });
+  await session.setModel(local);
+  now += 20000;
+  await runner.emitMessageEnd({ type: "message_end", message });
+  // Selected at end is router/local-ai, which has no counted records yet.
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
+  await session.setModel(physical);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", undefined]);
+  await session.setModel(auto);
+  // The message was attributed to the entry selected at message_start.
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mterra\u001b[22m: 100% · 50.0 t/s"]);
+});
+
+test("virtual entry identities containing slashes keep separate counters", async (t) => {
+  const f = await fixture(t, exampleSource
+    .replace('id = "auto"', 'id = "b/c"')
+    .replace('id = "local-ai"', 'id = "c"')
+    .replace(/provider = "openai-codex"\n/g, 'provider = "a/b"\n')
+    .replace(/provider = "router"\n/g, 'provider = "a"\n'));
+  const { runtime, session } = await f.start();
+  const runner = session.extensionRunner;
+  const statuses: [string, string | undefined][] = [];
+  runner.setUIContext({ ...runner.getUIContext(), setStatus: (key, line) => { statuses.push([key, line]); } });
+  let now = 0;
+  t.mock.method(performance, "now", () => now);
+  await runner.emit({ type: "session_start", reason: "startup" });
+  const first = runtime.getModel("a/b", "b/c");
+  const second = runtime.getModel("a", "c");
+  assert.ok(first && second);
+  async function message(model: string, output: number) {
+    const message = fauxAssistantMessage("answer");
+    message.provider = "physical";
+    message.model = model;
+    message.usage.output = output;
+    message.stopReason = "stop";
+    await runner.emit({ type: "message_start", message });
+    now += 1000;
+    await runner.emitMessageEnd({ type: "message_end", message });
+  }
+  await session.setModel(first);
+  await message("m1", 1000);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mm1\u001b[22m: 100% · 1000.0 t/s"]);
+  await session.setModel(second);
+  await message("m2", 1000);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mm2\u001b[22m: 100% · 1000.0 t/s"]);
+  await session.setModel(first);
+  assert.deepEqual(statuses.at(-1), ["multi-model-router", "\u001b[1mm1\u001b[22m: 100% · 1000.0 t/s"]);
 });
 
 test("factory supports two virtual IDs under one provider", async (t) => {

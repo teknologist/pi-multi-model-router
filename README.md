@@ -103,6 +103,12 @@ Pi stores this identity before dispatch, even if dispatch fails. The extension r
 
 Pi retains the virtual selection in session history and records the physical pair on assistant messages. When this extension is absent, native restore can select the last physical model instead. This is Pi behavior, not a router startup override.
 
+## Model token share and speed
+
+The status key `multi-model-router` shows output-token shares per physical model for the active virtual entry. Models used by multiple routes appear once. The most recently used model ID is rendered bold via ANSI (`\u001b[1m` / `\u001b[22m`) so it stands out in the status line. Percentages sum to 100; each segment looks like `gpt-6.1-terra: 42% · 71.5 t/s` and segments are joined with ` | `.
+
+Speed is cumulative output tokens divided by cumulative wall-clock seconds from `message_start` to `message_end`, including provider latency but excluding Jev classification. Without timing, only the share is shown. Error and aborted messages are excluded. Direct requests such as compaction count while a virtual entry is selected. The counted entry is fixed when the assistant message starts, so a mid-stream model switch still records the message under the entry that started it. The status line always reflects the entry selected at the end of the message. Counters are session-scoped in memory and reset on a new session or reload. The line is hidden until the first counted message, and when a non-router model is selected. Rendering is host-side: this extension only publishes the status key under `multi-model-router` via `ctx.ui.setStatus`; your status line displays the payload.
+
 ## Authentication and privacy
 
 The extension uses Pi's registered catalog and `modelRegistry.classify()`. It does not read credential files, override an API key, create a transport, or log classifier payloads. Configure credentials through Pi, not through this extension. Pi can obtain registered credentials from its native credential mechanisms and environment.
@@ -130,7 +136,7 @@ npm pack --dry-run --json
 
 `npm test` is offline with mocked transport and dummy credentials. It includes real Pi sessions, retry/tool dispatch, removed targets, authentication loss, cancellation, cold-process restore, branch/reload state, exact classifier payloads, and loading the packed entrypoint. It makes no paid classifier or physical-model call. Offline checks do not prove real picker behavior, TypeSafe billing/authentication, or local balanced/deep reasoning.
 
-The package allowlist contains only `index.ts`, `src/config.ts`, `src/router.ts`, `examples/config.toml`, `README.md`, `LICENSE`, and npm's required `package.json`. Tests, evaluation scripts, `.pi/`, and historical evidence do not ship.
+The package allowlist contains only `index.ts`, `src/config.ts`, `src/router.ts`, `src/usage.ts`, `examples/config.toml`, `README.md`, `LICENSE`, and npm's required `package.json`. Tests, evaluation scripts, `.pi/`, and historical evidence do not ship.
 
 ## Opt-in live evaluation
 
@@ -150,6 +156,6 @@ Historical evidence remains under `docs/plans/evidence/2026-11-12-jev/`. The ori
 
 MIT. This is an independent implementation. It does not include the excluded, unlicensed upstream router source.
 
-Implementation Gates 0–4 pass. Final validation is **offline (mocked transport)**: 456 tests pass with no failures or skipped tests. Independent core, native integration, dispatch-evidence, and evaluation reviews pass. Clean install, strict typecheck, packed loading, and the seven-file package allowlist pass. See `docs/plans/2026-11-12-multi-model-router-handoff.md` for exact evidence and remaining live checks.
+Implementation Gates 0–4 pass. Final validation is **offline (mocked transport)**: 475 tests pass with no failures or skipped tests. Independent core, native integration, dispatch-evidence, and evaluation reviews pass. Clean install, strict typecheck, packed loading, and the package allowlist pass. See `docs/plans/2026-11-12-multi-model-router-handoff.md` for exact evidence and remaining live checks.
 
 No Pi installation, commit, push, or publication occurs. Minimum-Node execution, Windows behavior, and power-loss durability remain unverified. Abrupt termination can leave an evaluation temporary file; incomplete final-report writes do not replace the pending report.
