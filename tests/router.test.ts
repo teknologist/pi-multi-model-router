@@ -315,7 +315,7 @@ for (const entry of entries) {
   });
 }
 
-const evidence: unknown = JSON.parse(await readFile(new URL("../docs/plans/evidence/2026-11-12-jev/revised-fixtures.json", import.meta.url), "utf8"));
+const evidence: unknown = JSON.parse(await readFile(new URL("../scripts/fixtures/jev-fixtures.json", import.meta.url), "utf8"));
 assert.ok(typeof evidence === "object" && evidence !== null);
 for (const group of ["core", "holdout", "contextual"]) {
   assert.ok(group in evidence);

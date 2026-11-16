@@ -1,21 +1,24 @@
 # Pi multi-model router
 
-Select a native virtual model in Pi. Jev selects a physical model and thinking level for each new user turn. Tool continuations and retries keep their physical target. The extension does not change your selected model.
+A [Pi](https://github.com/earendil-works/pi) extension that adds virtual models. When you select one, the router asks the Jev classifier (`typesafe/jev-latest`) to pick a physical model and thinking level for each new user turn. Tool continuations and retries keep their physical target. The extension never changes your selected model.
 
-This package targets **Pi 1.5.1 exactly**. It requires Node.js **22.19.0 or later**. Offline checks currently run on Node.js **25.9.0**, not the minimum version. The package is private and is not published.
+## Requirements
 
-## Manual installation, when authorized
+- Pi **1.5.0 or later** (`@earendil-works/pi-coding-agent` and `@earendil-works/pi-ai` peer dependencies `>=1.5.0`).
+- Node.js **22.19.0 or later**.
+- TypeSafe credentials registered in Pi for `typesafe/jev-latest` (via `/login` or `TYPESAFE_API_KEY`).
 
-These are future manual actions. This task does not install the extension into Pi.
+The only runtime dependency is `smol-toml`.
 
-1. Use a Pi 1.5.1 installation. In this checkout, run `npm ci` to install the pinned dependencies.
-2. Check your enabled extensions. Keep **one owner for each virtual provider/ID pair**. Disable any other extension that registers `openai-codex/auto` or `router/local-ai`. Do not load this extension twice through different paths or profiles.
-3. Copy `examples/config.toml` to `$PI_CODING_AGENT_DIR/extensions/pi-multi-model-router/config.toml`. If `PI_CODING_AGENT_DIR` is unset or empty, the path is `~/.pi/agent/extensions/pi-multi-model-router/config.toml`. Pi expands a leading `~` in that environment variable. An extension path does not change the config path.
-4. Register the required physical providers and their credentials in Pi. Register TypeSafe credentials in Pi for `typesafe/jev-latest`. Do not put credentials in this TOML file.
-5. From this checkout, start Pi with `pi -e ./index.ts`. This loads the extension for that invocation. Do not also enable it through another extension path. For persistent installation, use Pi's extension configuration with one absolute checkout path and the same one-owner rule.
-6. Use `/model` to select `openai-codex/auto` or `router/local-ai`. After a config edit, use `/reload`.
+## Installation
 
-The runtime dependency is `smol-toml` 1.9.1. Both Pi peer dependencies are pinned to 1.5.1. No startup hook forces a selection. Each virtual ID has independent branch state.
+1. Clone this repository and run `npm ci`.
+2. Copy `examples/config.toml` to `$PI_CODING_AGENT_DIR/extensions/pi-multi-model-router/config.toml`. If `PI_CODING_AGENT_DIR` is unset or empty, use `~/.pi/agent/extensions/pi-multi-model-router/config.toml`. Pi expands a leading `~` in that variable.
+3. Edit the config so every route names a provider and model registered in your Pi catalog, with credentials configured in Pi. Do not put credentials in the TOML file.
+4. Load the extension for one session with `pi -e ./index.ts`, or add the checkout's absolute path to Pi's extension configuration for persistent use.
+5. Use `/model` to select a virtual model, such as `openai-codex/auto` or `router/local-ai`. After editing the config, run `/reload`.
+
+Keep **one owner for each virtual provider/ID pair**. Do not load this extension twice through different paths or profiles, and disable any other extension that registers the same virtual IDs. No startup hook forces a selection. Each virtual ID has independent branch state.
 
 ## Configuration
 
@@ -82,7 +85,7 @@ description = "Complex tasks that need careful reasoning."
 
 The extension validates the whole config before it registers entries. A missing file gives a diagnostic and registers nothing. Invalid config gives an error and registers nothing. Registration itself is not transactional: a native physical-ID collision can reject one entry while another valid entry registers. Do not use a physical model's ID for a virtual model.
 
-`openai-codex/auto` uses Pi's OpenAI Codex authentication availability. `router/local-ai` can appear without physical-provider credentials; Pi checks each target when routing. Provider names such as `local-engine` and `local-engine-2` must match your Pi catalog. The extension does not create these providers.
+`openai-codex/auto` uses Pi's OpenAI Codex authentication availability. `router/local-ai` can appear without physical-provider credentials; Pi checks each target when routing. Provider names such as `local-engine` and `local-engine-2` are placeholders: replace them with providers registered in your Pi catalog. The extension does not create these providers.
 
 ## Routing, errors, and state
 
@@ -95,7 +98,7 @@ The extension validates the whole config before it registers entries. A missing 
 
 Empty user text, missing Jev, classifier errors, malformed answers, and unavailable classified targets use the configured fallback once. An unavailable fallback ends the request with a diagnostic. An unavailable sticky target also ends the request; it must not silently switch to fallback or an older success. Cancellation propagates instead of using fallback. The extension adds no classification retry loop. Pi's native HTTP helper can make two transport retries.
 
-Pi 1.5.1 omits `previous` or `failed` when its physical model disappears from the catalog. The extension records the last dispatched physical identity as `{ provider, modelId }` in public route state. On retry, that state detects a missing failed identity before Pi's older `previous` can cause a silent switch. It also detects a missing identity on continuation when Pi supplies no `previous` and the visible messages lack the response. Raw successful assistant messages detect a missing previous identity when state is absent. State does not select a different available target. Available native `failed ?? previous` fields remain authoritative.
+Pi omits `previous` or `failed` when its physical model disappears from the catalog. The extension records the last dispatched physical identity as `{ provider, modelId }` in public route state. On retry, that state detects a missing failed identity before Pi's older `previous` can cause a silent switch. It also detects a missing identity on continuation when Pi supplies no `previous` and the visible messages lack the response. Raw successful assistant messages detect a missing previous identity when state is absent. State does not select a different available target. Available native `failed ?? previous` fields remain authoritative.
 
 Pi stores this identity before dispatch, even if dispatch fails. The extension returns the same state object when the identity does not change. Pi stores state on the active session branch; it survives compaction and cold restart. Branch navigation and reload read that branch's stored state, not module-global state. Direct requests return no state. Shutdown removes the extension's submitted virtual identities. Reload removes old registrations and loads the current config; a missing or malformed replacement config leaves no old router registrations.
 
@@ -105,9 +108,9 @@ Pi retains the virtual selection in session history and records the physical pai
 
 ## Model token share and speed
 
-The status key `multi-model-router` shows output-token shares per physical model for the active virtual entry. Models used by multiple routes appear once. The most recently used model ID is rendered bold via ANSI (`\u001b[1m` / `\u001b[22m`) so it stands out in the status line. Percentages sum to 100; each segment looks like `gpt-6.1-terra: 42% · 71.5 t/s` and segments are joined with ` | `.
+The extension publishes the status key `multi-model-router` through `ctx.ui.setStatus`. It shows output-token shares per physical model for the active virtual entry, prefixed with a dimmed `⇄`. A model used by multiple routes appears once. The most recently used model ID is bold. Percentages sum to 100. A segment looks like `qwen3.8-27b: 42% · 71.5 t/s`, and segments are joined with ` | `.
 
-Speed is cumulative output tokens divided by cumulative wall-clock seconds from `message_start` to `message_end`, including provider latency but excluding Jev classification. Without timing, only the share is shown. Error and aborted messages are excluded. Direct requests such as compaction count while a virtual entry is selected. The counted entry is fixed when the assistant message starts, so a mid-stream model switch still records the message under the entry that started it. The status line always reflects the entry selected at the end of the message. Counters are session-scoped in memory and reset on a new session or reload. The line is hidden until the first counted message, and when a non-router model is selected. Rendering is host-side: this extension only publishes the status key under `multi-model-router` via `ctx.ui.setStatus`; your status line displays the payload.
+Speed is cumulative output tokens divided by cumulative wall-clock seconds from `message_start` to `message_end`. It includes provider latency and excludes Jev classification. Without timing, only the share is shown. Error and aborted messages are excluded. Direct requests such as compaction count while a virtual entry is selected. A message counts under the entry selected when it started. Counters live in memory and reset on a new session or reload. The status is hidden until the first counted message and whenever a non-router model is selected.
 
 ## Authentication and privacy
 
@@ -121,41 +124,31 @@ Jev is an external TypeSafe service, even when every physical target is local. E
 
 The extraction excludes system messages, tool results, tool-call arguments, thinking blocks, and images. Text typed by you or returned as assistant text can still contain secrets. **There is no secret-redaction guarantee.** Do not use this router for text that must remain on your machine.
 
-For the default Pi 1.5.1 text classifier, the JSON body contains `model`, `state`, and `questions`. It contains no complete transcript or images. Native HTTP headers include bearer authentication, content type, and a User-Agent that identifies Pi/version, platform, runtime, and architecture. Pi also applies configured provider/model/auth headers. These headers and normal network metadata are outside the text bounds. The bounds are not a claim that the entire HTTP request contains only these text fields.
+For Pi's default text classifier, the JSON body contains `model`, `state`, and `questions`. It contains no complete transcript or images. Native HTTP headers include bearer authentication, content type, and a User-Agent that identifies Pi/version, platform, runtime, and architecture. Pi also applies configured provider/model/auth headers. These headers and normal network metadata are outside the text bounds. The bounds are not a claim that the entire HTTP request contains only these text fields.
 
-## Verification
-
-From this checkout:
+## Development
 
 ```sh
 npm ci
 npm run typecheck
 npm test
-npm pack --dry-run --json
+npm pack --dry-run
 ```
 
-`npm test` is offline with mocked transport and dummy credentials. It includes real Pi sessions, retry/tool dispatch, removed targets, authentication loss, cancellation, cold-process restore, branch/reload state, exact classifier payloads, and loading the packed entrypoint. It makes no paid classifier or physical-model call. Offline checks do not prove real picker behavior, TypeSafe billing/authentication, or local balanced/deep reasoning.
+`npm test` runs offline with mocked transport and dummy credentials. It covers real Pi sessions, retry and tool dispatch, removed targets, authentication loss, cancellation, cold-process restore, branch and reload state, exact classifier payloads, and loading the packed entrypoint. It makes no paid classifier or model calls. The dev dependencies pin Pi 1.5.0, the minimum supported version.
 
-The package allowlist contains only `index.ts`, `src/config.ts`, `src/router.ts`, `src/usage.ts`, `examples/config.toml`, `README.md`, `LICENSE`, and npm's required `package.json`. Tests, evaluation scripts, `.pi/`, and historical evidence do not ship.
+The published package contains only `index.ts`, `src/`, `examples/config.toml`, `README.md`, `LICENSE`, and `package.json`. Tests and evaluation scripts do not ship.
 
-## Opt-in live evaluation
+### Optional live classifier evaluation
 
-This checkout includes a separate command. It is **not** part of `npm test` or ordinary CI. Obtain explicit permission before running it. It uses native registered TypeSafe credentials and synthetic fixtures only. It makes **52 classifier calls**, plus possible native transport retries, and no physical-model calls.
+`npm run evaluate:live` measures Jev routing against the synthetic fixtures in `scripts/fixtures/jev-fixtures.json`. It is not part of `npm test`. It uses your Pi-registered TypeSafe credentials and makes **52 paid classifier calls**, plus possible transport retries. It makes no physical-model calls.
 
 ```sh
 npm run evaluate:live -- --allow-paid-typesafe /absolute/path/to/new-results.json
 ```
 
-Without both arguments, the command stops before it loads credentials. The output path must not exist. The command writes the frozen inputs and thresholds before it calls Jev. It reports exact-label and acceptable-route counts separately, per-route counts, confusion matrices, repeat disagreements, API errors, and deep-to-quick errors. A failed gate gives a nonzero exit code. A setup failure or interruption leaves a pending file, not a passing report. Transport error text and credentials are not saved.
+Without both arguments, the command stops before it loads credentials. The output path must not already exist. The report gives exact-label and acceptable-route counts, per-route counts, confusion matrices, repeat disagreements, API errors, and deep-to-quick errors. The gate requires at least 22/24 acceptable choices for the core and holdout sets, 4/4 context choices, zero API errors, and zero deep-to-quick choices. A failed gate exits nonzero. Credentials and transport error text are never saved.
 
-The fixed gate requires at least **22/24** acceptable choices for each of the original and holdout sets, **4/4** context choices, zero API errors, and zero deep-to-quick choices. The historical holdout is already consumed; a rerun is not an unseen evaluation. A new tuning claim needs separately frozen, unseen fixtures and separate authorization.
+## License
 
-Historical evidence remains under `docs/plans/evidence/2026-11-12-jev/`. The original strict baseline is **21/24, FAIL**. The separately authorized revised run has original exact **21/24**, original acceptable **24/24**, holdout **24/24**, and context **4/4**, with zero API errors or deep-to-quick choices. This task does not rerun it. These small synthetic results do not prove physical answer quality or general routing reliability.
-
-## License and status
-
-MIT. This is an independent implementation. It does not include the excluded, unlicensed upstream router source.
-
-Implementation Gates 0–4 pass. Final validation is **offline (mocked transport)**: 475 tests pass with no failures or skipped tests. Independent core, native integration, dispatch-evidence, and evaluation reviews pass. Clean install, strict typecheck, packed loading, and the package allowlist pass. See `docs/plans/2026-11-12-multi-model-router-handoff.md` for exact evidence and remaining live checks.
-
-No Pi installation, commit, push, or publication occurs. Minimum-Node execution, Windows behavior, and power-loss durability remain unverified. Abrupt termination can leave an evaluation temporary file; incomplete final-report writes do not replace the pending report.
+MIT. See `LICENSE`.

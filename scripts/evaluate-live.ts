@@ -46,7 +46,9 @@ if (consent !== "--allow-paid-typesafe" || !output || extra.length > 0) {
       console.log(JSON.stringify({ pass: report.pass, summary: report.summary, errors: report.errors, deepToQuick: report.deepToQuick, disagreements: report.disagreements }));
       process.exitCode = report.pass ? 0 : 1;
     } finally {
-      await runtime.settleCredentialWrites();
+      // Added in Pi 1.5.1; absent on 1.5.0.
+      const settle: unknown = Reflect.get(runtime, "settleCredentialWrites");
+      if (typeof settle === "function") await settle.call(runtime);
     }
   } catch {
     console.error("Evaluation did not complete. Check the new output path and native registered TypeSafe credentials. Transport details are not logged.");

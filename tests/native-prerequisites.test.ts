@@ -32,14 +32,16 @@ test("pinned native SDK prerequisites (no transport)", async (t) => {
   const dir = await mkdtemp(join(tmpdir(), "pi-router-prerequisites-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
 
-  await t.test("loads the exact Pi 1.5.1 packages", async () => {
+  await t.test("loads Pi packages at or above the supported minimum 1.5.0", async () => {
     for (const name of ["pi-coding-agent", "pi-ai"]) {
       const manifest: unknown = JSON.parse(await readFile(
         new URL(`../node_modules/@earendil-works/${name}/package.json`, import.meta.url),
         "utf8",
       ));
       assert.ok(typeof manifest === "object" && manifest !== null && "version" in manifest);
-      assert.equal(manifest.version, "1.5.1");
+      assert.ok(typeof manifest.version === "string");
+      const [major = 0, minor = 0] = manifest.version.split(".").map(Number);
+      assert.ok(major > 1 || (major === 1 && minor >= 5), `${name} ${manifest.version} is below 1.5.0`);
     }
     const levels: Record<ModelThinkingLevel, true> = {
       off: true, minimal: true, low: true, medium: true, high: true, xhigh: true, max: true,

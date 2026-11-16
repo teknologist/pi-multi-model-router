@@ -9,7 +9,7 @@ interface Frozen {
   thresholds: { core: number; holdout: number; context: number; errors: number; deepToQuick: number };
 }
 
-export const frozen: Frozen = JSON.parse(await readFile(new URL("../docs/plans/evidence/2026-11-12-jev/revised-fixtures.json", import.meta.url), "utf8"));
+export const frozen: Frozen = JSON.parse(await readFile(new URL("./fixtures/jev-fixtures.json", import.meta.url), "utf8"));
 const sets = ["core", "holdout", "contextual"] as const;
 type SetName = typeof sets[number];
 interface Result { set: SetName; id: string; repeat: number; expected: Choice; allowed: Choice[]; choice?: Choice; error?: string }
