@@ -1,17 +1,40 @@
 {
   "name": "pi-multi-model-router",
   "version": "0.1.0",
-  "private": true,
+  "description": "Pi extension: virtual models that route each turn to a physical model via the Jev classifier",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teknologist/pi-multi-model-router.git"
+  },
+  "homepage": "https://github.com/teknologist/pi-multi-model-router#readme",
+  "bugs": {
+    "url": "https://github.com/teknologist/pi-multi-model-router/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=22.19.0"
   },
-  "keywords": ["pi-package"],
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "llm-router",
+    "model-routing"
+  ],
   "pi": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   },
-  "files": ["index.ts", "src/config.ts", "src/router.ts", "src/usage.ts", "examples/config.toml", "README.md", "LICENSE"],
+  "files": [
+    "index.ts",
+    "src/config.ts",
+    "src/router.ts",
+    "src/usage.ts",
+    "examples/config.toml",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
