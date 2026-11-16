@@ -2,6 +2,8 @@
 
 A [Pi](https://github.com/earendil-works/pi) extension that adds virtual models. When you select one, the router asks the Jev classifier (`typesafe/jev-latest`) to pick a physical model and thinking level for each new user turn. Tool continuations and retries keep their physical target. The extension never changes your selected model.
 
+It also includes a **status line widget**. While a virtual model is selected, it shows each physical model's share of output tokens and its speed, for example `⇄ qwen3.8-27b: 58% · 71.5 t/s | GLM-5.3-Flash-EXL3: 42% · 38.2 t/s`. See [Model token share and speed](#model-token-share-and-speed).
+
 ## Requirements
 
 - Pi **1.5.0 or later** (`@earendil-works/pi-coding-agent` and `@earendil-works/pi-ai` peer dependencies `>=1.5.0`).
